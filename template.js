@@ -1,4 +1,5 @@
 const BigQuery = require('BigQuery');
+const createRegex = require('createRegex');
 const generateRandom = require('generateRandom');
 const getAllEventData = require('getAllEventData');
 const getContainerVersion = require('getContainerVersion');
@@ -84,26 +85,6 @@ function getEmailAddressesFromEventData(eventData) {
   return [];
 }
 
-function getPhoneNumbersFromEventData(eventData) {
-  const eventDataUserData = eventData.user_data || {};
-
-  const phone =
-    eventDataUserData.phone ||
-    eventDataUserData.phone_number ||
-    eventDataUserData.sha256_phone_number;
-
-  const phoneType = getType(phone);
-
-  if (phoneType === 'string' || phoneType === 'number') return [phone];
-  else if (phoneType === 'array') return phone.length > 0 ? phone : [];
-  else if (phoneType === 'object') {
-    const phonesFromObject = Object.values(phone);
-    if (phonesFromObject.length) return phonesFromObject;
-  }
-
-  return [];
-}
-
 function addUserIdentifiers(data, eventData, event) {
   const itemizeUserIdentifier = (input) => {
     const type = getType(input);
@@ -112,9 +93,9 @@ function addUserIdentifiers(data, eventData, event) {
     return [];
   };
 
+  // Auto-mapped ones.
   const userIdentifiersListsByType = {
     email_sha256: [],
-    phonenumber_sha256: [],
     ip: [],
     mobile_id: []
   };
@@ -124,12 +105,6 @@ function addUserIdentifiers(data, eventData, event) {
     if (emailAddresses.length) {
       userIdentifiersListsByType.email_sha256 = emailAddresses;
       userIdentifiersListsByType.email_sha256.autoMapped = true;
-    }
-
-    const phoneNumbers = getPhoneNumbersFromEventData(eventData);
-    if (phoneNumbers.length) {
-      userIdentifiersListsByType.phonenumber_sha256 = phoneNumbers;
-      userIdentifiersListsByType.phonenumber_sha256.autoMapped = true;
     }
 
     if (eventData.ip_override) {
@@ -275,16 +250,8 @@ function addEventCustomData(data, event) {
 function normalizePhoneNumber(phoneNumber) {
   if (!phoneNumber) return phoneNumber;
 
-  phoneNumber = phoneNumber
-    .split(' ')
-    .join('')
-    .split('-')
-    .join('')
-    .split('(')
-    .join('')
-    .split(')')
-    .join('');
-  if (phoneNumber[0] !== '+') phoneNumber = '+' + phoneNumber; // TO DO - Check if the + will be used or not
+  const nonDigitsRegex = createRegex('[^0-9]', 'g');
+  phoneNumber = makeString(phoneNumber).replace(nonDigitsRegex, '');
   return phoneNumber;
 }
 

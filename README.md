@@ -49,7 +49,7 @@ The **Viant Conversion API Tag** for Google Tag Manager Server-Side allows you t
 
 | Parameter | Description |
 | :--- | :--- |
-| **Automap User Identifiers Parameters** | If `true`, the tag automatically maps user identifiers from the event data, including email, phone, IP address, and mobile device IDs. |
+| **Automap User Identifiers Parameters** | If `true`, the tag automatically maps user identifiers from the event data, including email, IP address, and mobile device IDs. |
 | **User Identifiers Parameters** | Manually provide user identifiers. Supported types include `Email Address`, `Phone Number`, `IP Address`, `Mobile ID`, and `User Physical Address`. Email, phone, and address will be automatically SHA-256 hashed if not already. |
 
 ### Event Parameters

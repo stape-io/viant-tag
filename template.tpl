@@ -308,7 +308,7 @@ ___TEMPLATE_PARAMETERS___
           }
         ],
         "simpleValueType": true,
-        "help": "If enabled, the tag will attempt to automatically map parameters from your event data. \n\u003cbr/\u003e\u003cbr/\u003e\nAny value you manually enter in a field below will always override the auto-mapped value.\n\u003cbr/\u003e\u003cbr/\u003e\nDefault mappings:\n\u003cul\u003e\n\u003cli\u003eEmail: \u003ci\u003eeventData.email \u003e eventData.email_address \u003e eventData.userData.email \u003e eventData.userData.email_address \u003e eventData.userData.sha256_email_address\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003ePhone: \u003ci\u003eeventData.phone \u003e eventData.phone_number \u003e eventData.userData.phone\u003c/i\u003e \u003e eventData.userData.phone_number \u003e eventData.userData.sha256_phone_number\u003c/li\u003e\n\u003cli\u003eIP Address: \u003ci\u003eeventData.ip_override\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003eMobile ID: (iOS IDFA and Android GAID/AAID) \u003ci\u003eeventData[\u0027x-ga-resettable_device_id\u0027]\u003c/i\u003e or (iOS IDFV, if IDFA is not available) \u003ci\u003eeventData[\u0027x-ga-vendor_device_id\u0027]\u003c/i\u003e\u003c/li\u003e\n\u003c/ul\u003e",
+        "help": "If enabled, the tag will attempt to automatically map parameters from your event data. \n\u003cbr/\u003e\u003cbr/\u003e\nAny value you manually enter in a field below will always override the auto-mapped value.\n\u003cbr/\u003e\u003cbr/\u003e\nDefault mappings:\n\u003cul\u003e\n\u003cli\u003eEmail: \u003ci\u003eeventData.email \u003e eventData.email_address \u003e eventData.userData.email \u003e eventData.userData.email_address \u003e eventData.userData.sha256_email_address\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003eIP Address: \u003ci\u003eeventData.ip_override\u003c/i\u003e\u003c/li\u003e\n\u003cli\u003eMobile ID: (iOS IDFA and Android GAID/AAID) \u003ci\u003eeventData[\u0027x-ga-resettable_device_id\u0027]\u003c/i\u003e or (iOS IDFV, if IDFA is not available) \u003ci\u003eeventData[\u0027x-ga-vendor_device_id\u0027]\u003c/i\u003e\u003c/li\u003e\n\u003c/ul\u003e",
         "defaultValue": true
       },
       {
@@ -329,11 +329,11 @@ ___TEMPLATE_PARAMETERS___
             "selectItems": [
               {
                 "value": "email_sha256",
-                "displayValue": "Email Address (array or single item - if not SHA256 hashed, it will be automatically hashed)"
+                "displayValue": "Email Address (if not SHA256 hashed, it will be automatically hashed)"
               },
               {
                 "value": "phonenumber_sha256",
-                "displayValue": "Phone Number (array or single item - if not SHA256 hashed, it will be automatically hashed)"
+                "displayValue": "Phone Number (if not SHA256 hashed, it will be automatically hashed)"
               },
               {
                 "value": "ip",
@@ -358,7 +358,7 @@ ___TEMPLATE_PARAMETERS___
           }
         ],
         "newRowButtonText": "Add Parameter",
-        "help": "",
+        "help": "All of the fields can receive an array the corresponding identifier or only a single item.\n\u003cbr/\u003e\nExample: \n\u003c/br\u003e[\"foo@example.com\", \"bar@example.net\"] or \"abc@example.org\"\n\u003cbr/\u003e\n\u003cbr/\u003e\n\u003cb\u003ePhone Number\u003c/b\u003e expected format:\n\u003cul\u003e\n\u003cli\u003eNo country code\u003c/li\u003e\n\u003cli\u003eNo \"+\" sign in front of the number\u003c/li\u003e\n\u003cli\u003eOnly digits (no hyphens, no parenthesis etc.)\u003c/li\u003e\n\u003c/ul\u003e",
         "displayName": "User Identifiers Parameters"
       }
     ]
@@ -666,6 +666,7 @@ ___TEMPLATE_PARAMETERS___
 ___SANDBOXED_JS_FOR_SERVER___
 
 const BigQuery = require('BigQuery');
+const createRegex = require('createRegex');
 const generateRandom = require('generateRandom');
 const getAllEventData = require('getAllEventData');
 const getContainerVersion = require('getContainerVersion');
@@ -751,26 +752,6 @@ function getEmailAddressesFromEventData(eventData) {
   return [];
 }
 
-function getPhoneNumbersFromEventData(eventData) {
-  const eventDataUserData = eventData.user_data || {};
-
-  const phone =
-    eventDataUserData.phone ||
-    eventDataUserData.phone_number ||
-    eventDataUserData.sha256_phone_number;
-
-  const phoneType = getType(phone);
-
-  if (phoneType === 'string' || phoneType === 'number') return [phone];
-  else if (phoneType === 'array') return phone.length > 0 ? phone : [];
-  else if (phoneType === 'object') {
-    const phonesFromObject = Object.values(phone);
-    if (phonesFromObject.length) return phonesFromObject;
-  }
-
-  return [];
-}
-
 function addUserIdentifiers(data, eventData, event) {
   const itemizeUserIdentifier = (input) => {
     const type = getType(input);
@@ -779,9 +760,9 @@ function addUserIdentifiers(data, eventData, event) {
     return [];
   };
 
+  // Auto-mapped ones.
   const userIdentifiersListsByType = {
     email_sha256: [],
-    phonenumber_sha256: [],
     ip: [],
     mobile_id: []
   };
@@ -791,12 +772,6 @@ function addUserIdentifiers(data, eventData, event) {
     if (emailAddresses.length) {
       userIdentifiersListsByType.email_sha256 = emailAddresses;
       userIdentifiersListsByType.email_sha256.autoMapped = true;
-    }
-
-    const phoneNumbers = getPhoneNumbersFromEventData(eventData);
-    if (phoneNumbers.length) {
-      userIdentifiersListsByType.phonenumber_sha256 = phoneNumbers;
-      userIdentifiersListsByType.phonenumber_sha256.autoMapped = true;
     }
 
     if (eventData.ip_override) {
@@ -942,16 +917,8 @@ function addEventCustomData(data, event) {
 function normalizePhoneNumber(phoneNumber) {
   if (!phoneNumber) return phoneNumber;
 
-  phoneNumber = phoneNumber
-    .split(' ')
-    .join('')
-    .split('-')
-    .join('')
-    .split('(')
-    .join('')
-    .split(')')
-    .join('');
-  if (phoneNumber[0] !== '+') phoneNumber = '+' + phoneNumber; // TO DO - Check if the + will be used or not
+  const nonDigitsRegex = createRegex('[^0-9]', 'g');
+  phoneNumber = makeString(phoneNumber).replace(nonDigitsRegex, '');
   return phoneNumber;
 }
 
@@ -1752,8 +1719,6 @@ scenarios:
     \              value:\n                '27c6b8e780cfc293ef0436f7d8421af0bed83caae706734b49f8e95d5295b462'\n\
     \            },\n            {\n              type: 'email_sha256',\n        \
     \      value:\n                'fea4050abbde8296abcf9b3a4ada06167e9299081c9273573a53ac5c20b6578f'\n\
-    \            },\n            {\n              type: 'phonenumber_sha256',\n  \
-    \            value:\n                'c698c0b85d32cbcf5033ada58f34de87d4f7415efaf5a8d1c1e9e63393dcc85e'\n\
     \            },\n            { type: 'ip', value: '2804:14d:c096:8dd6:311c:8c00:e6c:e33'\
     \ },\n            { type: 'mobile_id', value: 'x-ga-resettable_device_id' }\n\
     \          ],\n          purchasedItems: [\n            {\n              itemId:\
@@ -1769,40 +1734,40 @@ scenarios:
     \ => {\n  assertApi('gtmOnSuccess').wasCalled();\n  assertApi('gtmOnFailure').wasNotCalled();\n\
     });"
 - name: '[Request] [Conversion] [Data from UI fields] Is successfully built and sent'
-  code: "setAllMockData({\n  autoMapServerEventDataParameters: true,\n  autoMapUserIdentifiersParameters:\
-    \ true,\n  autoMapEventParameters: true\n});\n\nsetGetAllEventData();\n\nmock('sendHttpRequest',\
+  code: "setAllMockData({\n  autoMapServerEventDataParameters: false,\n  autoMapUserIdentifiersParameters:\
+    \ false,\n  autoMapEventParameters: false\n});\n\nsetGetAllEventData();\n\nmock('sendHttpRequest',\
     \ (requestUrl, requestOptions, requestBody) => {\n  const response = { statusCode:\
     \ 200 };\n    \n  if (requestUrl === EXPECTED_ACCESS_TOKEN_ENDPOINT) {\n    response.body\
     \ = JSON.stringify(EXPECTED_RESPONSE_TOKEN_OBJ);  \n  } else if (requestUrl ===\
     \ EXPECTED_CONVERSIONS_ENDPOINT) {\n    const parsedBody = JSON.parse(requestBody);\n\
     \    assertThat(parsedBody).isEqualTo([\n      {\n        accountId: 2222,\n \
     \       advertisers: [69756, 111111],\n        salesData: {\n          conversionEventType:\
-    \ 'PageView',\n          conversionTimestamp: '2025-10-10T14:11:11.000Z',\n  \
+    \ 'PageView',\n          conversionTimestamp: '2025-10-10T14:11:21.000Z',\n  \
     \        identifiers: [\n            {\n              type: 'email_sha256',\n\
     \              value:\n                '9b431636bd164765d63c573c346708846af4f68fe3701a77a3bdd7e7e5166254'\n\
     \            },\n            {\n              type: 'email_sha256',\n        \
     \      value:\n                'fea4050abbde8296abcf9b3a4ada06167e9299081c9273573a53ac5c20b6578f'\n\
-    \            },\n            {\n              type: 'phonenumber_sha256',\n  \
-    \            value:\n                '365b459b0d18eb68c2ff5e46169a7bb5414798b0eed2dd63bbad481a5b594631'\n\
     \            },\n            { type: 'ip', value: '192.168.0.1' },\n         \
     \   { type: 'mobile_id', value: 'mobileId1' },\n            { type: 'mobile_id',\
-    \ value: 'mobileId2' },\n            {\n              type: 'address_sha256',\n\
-    \              value:\n                '9b37245a37d6b19673dbe98a4703911a548e1294b61304c6738124f7b62a0502'\n\
-    \            }\n          ],\n          purchasedItems:  [\n            {\n  \
-    \            itemId: 'SKU_12345',\n              productName: 'Stan and Friends\
+    \ value: 'mobileId2' },\n            {\n              type: 'phonenumber_sha256',\n\
+    \              value:\n                'b401223f253fc05ba61db2d663aa8b1142e427ddbfb5f29b8d2474c37bb19d2c'\n\
+    \            },\n            {\n              type: 'address_sha256',\n      \
+    \        value:\n                '9b37245a37d6b19673dbe98a4703911a548e1294b61304c6738124f7b62a0502'\n\
+    \            }\n          ],\n          channel: 'test',\n          amount: '123',\n\
+    \          currency: 'BRL',\n          purchasedItems: [\n            {\n    \
+    \          itemId: 'SKU_12345',\n              productName: 'Stan and Friends\
     \ Tee',\n              productCategory: 'Apparel|iajsdiajsd|oasodiasd',\n    \
     \          price: 10.01,\n              quantity: 3\n            },\n        \
     \    {\n              itemId: 'SKU_12346',\n              productName: \"Google\
     \ Grey Women's (Tee)\",\n              productCategory: 'Apparel|iajsdiajsd|oasodiasd',\n\
     \              price: 21.01,\n              quantity: 2\n            }\n     \
-    \     ],\n          amount: '123',\n          currency: 'BRL',\n          transactionId:\
-    \ 'eventId',\n          channel: 'test',\n          storeId: 'storeId',\n    \
-    \      conversionLocation: {\n            country: 'clCountry',\n            state:\
-    \ 'clState',\n            city: 'clCity'\n          },\n          custom: { foo:\
-    \ 'test', abc: '123' }\n        }\n      }\n    ]);\n  }\n  \n  return Promise.create((resolve,\
-    \ reject) => {\n    resolve(response);\n  });\n});\n\nrunCode(mockData);\n\ncallLater(()\
-    \ => {\n  assertApi('gtmOnSuccess').wasCalled();\n  assertApi('gtmOnFailure').wasNotCalled();\n\
-    });"
+    \     ],\n          storeId: 'storeId',\n          conversionLocation: {\n   \
+    \         country: 'clCountry',\n            state: 'clState',\n            city:\
+    \ 'clCity'\n          },\n          transactionId: 'eventId',\n          custom:\
+    \ { foo: 'test', abc: '123' }\n        }\n      }\n    ]);\n  }\n  \n  return\
+    \ Promise.create((resolve, reject) => {\n    resolve(response);\n  });\n});\n\n\
+    runCode(mockData);\n\ncallLater(() => {\n  assertApi('gtmOnSuccess').wasCalled();\n\
+    \  assertApi('gtmOnFailure').wasNotCalled();\n});"
 - name: '[Request] [Conversion] Token must be renewed if API returns 401 and a expired
     token message'
   code: "setAllMockData();\n\n// Cached token that is valid according to the stored\
@@ -1939,7 +1904,7 @@ setup: "const JSON = require('JSON');\nconst Promise = require('Promise');\ncons
   \    accountId: '2222',\n    advertiserIds: [{ id: '69756' }, { id: '111111' }],\n\
   \    authUsername: 'authUsername',\n    authPassword: 'authPassword',\n    useOptimisticScenario:\
   \ false,\n  \n    autoMapServerEventDataParameters: true,\n    serverEventDataList:\
-  \ [\n      { name: 'conversionTimestamp', value: '1760105471000' }\n    ],\n  \n\
+  \ [\n      { name: 'conversionTimestamp', value: '1760105481000' }\n    ],\n  \n\
   \    autoMapUserIdentifiersParameters: true,\n    userIdentifiersParametersList:\
   \ [\n      { name: 'email_sha256', value: 'test1@example.com' },\n      { name:\
   \ 'phonenumber_sha256', value: '555555555555' },\n      { name: 'email_sha256',\
