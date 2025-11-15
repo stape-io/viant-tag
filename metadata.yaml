@@ -1,0 +1,5 @@
+homepage: 'https://stape.io/'
+documentation: 'https://github.com/stape-io/viant-tag'
+versions:
+  - sha: 926a3fba0996aeff4e7953c1dcbec20e22dd3150
+    changeNotes: Initial release.
