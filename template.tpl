@@ -948,7 +948,7 @@ function hashDataIfNeeded(event) {
 }
 
 function mapEventName(data, eventData) {
-  if (data.eventTypeSetupMethod === 'inherit') {
+  if (data.eventType === 'inherit') {
     const eventName = eventData.event_name;
 
     const gaToEventName = {
