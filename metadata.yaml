@@ -1,5 +1,7 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/viant-tag'
 versions:
+  - sha: 62ca77fb9d70a75819a6c462424066b3b70f8bac
+    changeNotes: Fix typo when determining the event name.
   - sha: 926a3fba0996aeff4e7953c1dcbec20e22dd3150
     changeNotes: Initial release.
