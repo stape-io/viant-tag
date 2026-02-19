@@ -115,7 +115,7 @@ function addUserIdentifiers(data, eventData, event) {
     let mobileDeviceId = eventData['x-ga-resettable_device_id'];
     const platform = eventData['x-ga-platform'];
     if (platform === 'ios' && mobileDeviceId === '00000000-0000-0000-0000-000000000000') {
-      mobileDeviceId === eventData['x-ga-vendor_device_id'];
+      mobileDeviceId = eventData['x-ga-vendor_device_id'];
     }
     if (mobileDeviceId) {
       userIdentifiersListsByType.mobile_id.push(mobileDeviceId);
