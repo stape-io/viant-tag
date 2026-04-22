@@ -13,7 +13,7 @@ ___INFO___
   "id": "cvt_temp_public_id",
   "version": 1,
   "securityGroups": [],
-  "displayName": "Viant Conversion API",
+  "displayName": "Viant Conversion API by Stape",
   "categories": [
     "ADVERTISING",
     "MARKETING",
@@ -1950,6 +1950,9 @@ setup: "const JSON = require('JSON');\nconst Promise = require('Promise');\ncons
 
 
 ___NOTES___
+
+2026-04-22 - Change Notes:
+  - Add "by Stape" branding to the template display name
 
 Created on 8/20/2025, 2:02:02 PM
 

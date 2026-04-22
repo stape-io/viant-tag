@@ -1,6 +1,8 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/viant-tag'
 versions:
+  - sha: 3c025eb538d099efd7a6d0835cbdd89cdb4f57c4
+    changeNotes: Update display name.
   - sha: 71113f7108cefe828d318656ed17f04900246d2c
     changeNotes: Fix an issue with auto-mapping Mobile ID.
   - sha: 62ca77fb9d70a75819a6c462424066b3b70f8bac
